@@ -84,6 +84,24 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
     with open(temp_file, "w", encoding="utf-8") as f:
         json.dump(cevaplar, f, ensure_ascii=False, indent=2)
 
+    # Google Drive'a geçici cevap yükleme
+    try:
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaFileUpload
+
+        drive_creds = service_account.Credentials.from_service_account_file(
+            "studious-plate-459405-q4-6c8b234b1ee4.json",
+            scopes=["https://www.googleapis.com/auth/drive"]
+        )
+        drive_service = build("drive", "v3", credentials=drive_creds)
+
+        file_metadata = {"name": os.path.basename(temp_file)}
+        media = MediaFileUpload(temp_file, mimetype="application/json")
+        drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+    except Exception as e:
+        print("Geçici cevap Google Drive'a yüklenemedi:", e)
+
 def yukle_temp_cevaplar(ad_soyad):
     temp_file = f"temp_cevaplar/temp_{ad_soyad.replace(' ','_').lower()}.json"
     if os.path.exists(temp_file):
@@ -258,6 +276,10 @@ if st.session_state["ankete_basla"]:
         dan_df = pd.read_excel("Birim_Degerlendirme_Anketi_Guncel.xlsx")
     except Exception:
         dan_df = pd.DataFrame()
+    # -- Kontrol: dan_df boş veya gerekli sütunlar yoksa hata ver ve dur --
+    if dan_df.empty or "Birim" not in dan_df.columns or "Soru" not in dan_df.columns:
+        st.error("Anket soruları yüklenemedi. Excel dosyası eksik veya hatalı.")
+        st.stop()
 
     col1, col2 = st.columns([0.1, 0.9])
     with col1:
@@ -332,12 +354,18 @@ if st.session_state["ankete_basla"]:
             st.stop()
 
         sorular = dan_df[dan_df["Birim"] == secilen_birim]["Soru"].tolist()
+        if not sorular:
+            st.warning(f"{secilen_birim} birimi için tanımlı soru bulunamadı.")
+            st.stop()
 
         st.subheader(f"{secilen_birim} Anket Soruları")
 
         if secilen_birim not in st.session_state["cevaplar"]:
             st.session_state["cevaplar"][secilen_birim] = {}
 
+        if not calisanlar.get(secilen_birim):
+            st.error(f"{secilen_birim} birimi için tanımlı çalışan bulunamadı.")
+            st.stop()
         cols = st.columns(len(calisanlar[secilen_birim]) + 1)
         cols[0].markdown("** **", unsafe_allow_html=True)
 
