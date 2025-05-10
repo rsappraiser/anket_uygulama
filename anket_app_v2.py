@@ -83,26 +83,31 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
 def kaydet_temp_cevaplar(ad_soyad, cevaplar):
     os.makedirs("temp_cevaplar", exist_ok=True)
     temp_file = f"temp_cevaplar/temp_{ad_soyad.replace(' ','_').lower()}.json"
+    print(f"📝 [LOG] Geçici cevap kaydediliyor: {temp_file}")
     with open(temp_file, "w", encoding="utf-8") as f:
         json.dump(cevaplar, f, ensure_ascii=False, indent=2)
 
     # Google Drive'a geçici cevap yükleme
-    try:
-        from google.oauth2 import service_account
-        from googleapiclient.discovery import build
-        from googleapiclient.http import MediaFileUpload
+    if not os.path.exists(temp_file):
+        print(f"❌ [LOG] Geçici cevap dosyası bulunamadı: {temp_file}")
+    else:
+        try:
+            from google.oauth2 import service_account
+            from googleapiclient.discovery import build
+            from googleapiclient.http import MediaFileUpload
 
-        drive_creds = service_account.Credentials.from_service_account_file(
-            "studious-plate-459405-q4-6c8b234b1ee4.json",
-            scopes=["https://www.googleapis.com/auth/drive"]
-        )
-        drive_service = build("drive", "v3", credentials=drive_creds)
+            drive_creds = service_account.Credentials.from_service_account_file(
+                "studious-plate-459405-q4-6c8b234b1ee4.json",
+                scopes=["https://www.googleapis.com/auth/drive"]
+            )
+            drive_service = build("drive", "v3", credentials=drive_creds)
 
-        file_metadata = {"name": os.path.basename(temp_file)}
-        media = MediaFileUpload(temp_file, mimetype="application/json")
-        drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-    except Exception as e:
-        print("Geçici cevap Google Drive'a yüklenemedi:", e)
+            file_metadata = {"name": os.path.basename(temp_file)}
+            media = MediaFileUpload(temp_file, mimetype="application/json")
+            drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+            print(f"✅ [LOG] Geçici cevap Google Drive'a yüklendi: {temp_file}")
+        except Exception as e:
+            print("Geçici cevap Google Drive'a yüklenemedi:", e)
 
 def yukle_temp_cevaplar(ad_soyad):
     temp_file = f"temp_cevaplar/temp_{ad_soyad.replace(' ','_').lower()}.json"
