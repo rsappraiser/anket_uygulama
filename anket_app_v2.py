@@ -4,6 +4,8 @@ import base64
 import os
 import json
 import time
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # --- Sayfa Ayarı ---
 st.set_page_config(layout="wide", page_title="Arge Gayrimenkul Değerleme ve Danışmanlık A.Ş. Anket Uygulaması")
@@ -27,6 +29,54 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
     yeni_df = pd.DataFrame([cevaplar_birim])
     sonuc_df = pd.concat([mevcut_df, yeni_df], ignore_index=True)
     sonuc_df.to_excel(filename, index=False)
+    os.makedirs("/mount/src/anket_sonuclari", exist_ok=True)
+    sonuc_df.to_excel("/mount/src/anket_sonuclari/sonuc_{}.xlsx".format(ad_soyad.replace(' ','_').lower()), index=False)
+
+    # Google Drive'a yükleme
+    try:
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+        from googleapiclient.http import MediaFileUpload
+
+        drive_creds = service_account.Credentials.from_service_account_file(
+            "studious-plate-459405-q4-6c8b234b1ee4.json",
+            scopes=["https://www.googleapis.com/auth/drive"]
+        )
+
+        drive_service = build("drive", "v3", credentials=drive_creds)
+
+        file_metadata = {"name": os.path.basename(filename)}
+        media = MediaFileUpload(filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+
+    except Exception as e:
+        print("Google Drive'a yükleme hatası:", e)
+
+    # Google Sheets'e kaydetme
+    try:
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        creds = ServiceAccountCredentials.from_json_keyfile_name("studious-plate-459405-q4-6c8b234b1ee4.json", scope)
+        client = gspread.authorize(creds)
+
+        sheet_name = "Anket_Sonuclari"
+        spreadsheet = None
+        try:
+            spreadsheet = client.open(sheet_name)
+        except gspread.SpreadsheetNotFound:
+            spreadsheet = client.create(sheet_name)
+            spreadsheet.share('', perm_type='anyone', role='writer')
+
+        worksheet_title = ad_soyad.replace(' ', '_')
+        try:
+            worksheet = spreadsheet.worksheet(worksheet_title)
+            worksheet.clear()
+        except gspread.WorksheetNotFound:
+            worksheet = spreadsheet.add_worksheet(title=worksheet_title, rows="100", cols="20")
+
+        worksheet.update([sonuc_df.columns.values.tolist()] + sonuc_df.values.tolist())
+
+    except Exception as e:
+        print("Google Sheets'e kaydetme hatası:", e)
 
 def kaydet_temp_cevaplar(ad_soyad, cevaplar):
     os.makedirs("temp_cevaplar", exist_ok=True)
@@ -137,7 +187,9 @@ div[data-testid="column"] {{
 </style><div class='banner'></div><div class='content'>""", unsafe_allow_html=True)
 
 # --- Kullanıcı Listesi ---
-kullanicilar_df = pd.read_excel("Kullanici_Listesi_Tokenli.xlsx")
+import os
+excel_path = os.path.join(os.path.dirname(__file__), "Kullanici_Listesi_Tokenli.xlsx")
+kullanicilar_df = pd.read_excel(excel_path)
 
 # --- Token Oku ---
 if "token" not in st.session_state:
