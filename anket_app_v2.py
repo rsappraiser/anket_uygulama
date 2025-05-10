@@ -4,6 +4,8 @@ import base64
 import os
 import json
 import time
+start_time = time.time()
+print("📌 [LOG] Kod başlatıldı")
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -208,6 +210,7 @@ div[data-testid="column"] {{
 import os
 excel_path = os.path.join(os.path.dirname(__file__), "Kullanici_Listesi_Tokenli.xlsx")
 kullanicilar_df = pd.read_excel(excel_path)
+print("✅ [LOG] Kullanıcı Excel yüklendi. Geçen süre:", round(time.time() - start_time, 2), "saniye")
 
 # --- Token Oku ---
 if "token" not in st.session_state:
@@ -218,6 +221,7 @@ if "token" not in st.session_state:
 
 # --- Giriş Sayfası ---
 if not st.session_state["ankete_basla"] and not st.session_state["anket_tamamlandi"]:
+    print("📋 [LOG] Giriş sayfası yüklendi. Süre:", round(time.time() - start_time, 2), "saniye")
     token = st.session_state["token"]
 
     if token and kontrol_token(token):
@@ -245,7 +249,9 @@ if not st.session_state["ankete_basla"] and not st.session_state["anket_tamamlan
                 st.session_state["secilen_ad"] = ad_soyad
                 st.markdown(f"Sayın **{ad_soyad}**, ankete başlamak için aşağıdaki butona tıklayınız.", unsafe_allow_html=True)
                 if st.button("Ankete Başla"):
+                    print("🟡 [LOG] Ankete Başla butonuna basıldı.")
                     st.session_state["cevaplar"] = yukle_temp_cevaplar(ad_soyad)
+                    print("📁 [LOG] Geçici cevaplar yüklendi. Süre:", round(time.time() - start_time, 2), "saniye")
                     st.session_state["ankete_basla"] = True
                     st.session_state["bitirme_onayi"] = False
                     st.rerun()
