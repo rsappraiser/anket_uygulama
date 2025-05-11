@@ -1,4 +1,5 @@
 import streamlit as st
+st.set_page_config(layout="wide", page_title="Arge Gayrimenkul Değerleme ve Danışmanlık A.Ş. Anket Uygulaması")
 import pandas as pd
 import base64
 import os
@@ -10,8 +11,6 @@ st.write("⏳ Uygulama başlatılıyor...")
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# --- Sayfa Ayarı ---
-st.set_page_config(layout="wide", page_title="Arge Gayrimenkul Değerleme ve Danışmanlık A.Ş. Anket Uygulaması")
 
 # --- Yardımcı Fonksiyonlar ---
 def get_base64_image(path):
@@ -41,8 +40,8 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
         from googleapiclient.discovery import build
         from googleapiclient.http import MediaFileUpload
 
-        drive_creds = service_account.Credentials.from_service_account_file(
-            "studious-plate-459405-q4-6c8b234b1ee4.json",
+        drive_creds = service_account.Credentials.from_service_account_info(
+            st.secrets["google"],
             scopes=["https://www.googleapis.com/auth/drive"]
         )
 
@@ -58,7 +57,7 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
     # Google Sheets'e kaydetme
     try:
         scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
-        creds = ServiceAccountCredentials.from_json_keyfile_name("studious-plate-459405-q4-6c8b234b1ee4.json", scope)
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["google"], scope)
         client = gspread.authorize(creds)
 
         sheet_name = "Anket_Sonuclari"
@@ -82,25 +81,31 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
         print("Google Sheets'e kaydetme hatası:", e)
 
 def kaydet_temp_cevaplar(ad_soyad, cevaplar):
+    print(f"🟢 [TRACE] Temp cevap kaydı başlıyor: {ad_soyad}")
+    print(f"🔍 [DEBUG] kaydet_temp_cevaplar başlatıldı - Kullanıcı: {ad_soyad}")
     print("💡 kaydet_temp_cevaplar fonksiyonu çağrıldı")
     os.makedirs("temp_cevaplar", exist_ok=True)
     temp_file = f"temp_cevaplar/temp_{ad_soyad.replace(' ','_').lower()}.json"
     print(f"📝 [LOG] Geçici cevap kaydediliyor: {temp_file}")
     st.write("📄 Geçici cevap kaydediliyor...")
+    print(f"🟢 [TRACE] Dosya hazırlanıyor: {temp_file}")
     with open(temp_file, "w", encoding="utf-8") as f:
         json.dump(cevaplar, f, ensure_ascii=False, indent=2)
+        print(f"🟢 [TRACE] JSON dump tamamlandı: {temp_file}")
     print(f"✅ [LOG] Geçici cevap dosyası yazıldı: {temp_file}")
 
     # Google Drive'a geçici cevap yükleme
     print(f"📤 [LOG] Google Drive'a geçici cevap yükleme başlıyor: {temp_file}")
     st.write("📤 Google Drive'a yükleniyor...")
+    print("🟢 [TRACE] Google upload aşaması başladı")
     try:
+        print(f"📤 [DEBUG] Google Drive upload için hazırlanıyor: {temp_file}")
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
         from googleapiclient.http import MediaFileUpload
 
-        drive_creds = service_account.Credentials.from_service_account_file(
-            "studious-plate-459405-q4-6c8b234b1ee4.json",
+        drive_creds = service_account.Credentials.from_service_account_info(
+            st.secrets["google"],
             scopes=["https://www.googleapis.com/auth/drive"]
         )
         drive_service = build("drive", "v3", credentials=drive_creds)
@@ -110,6 +115,7 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
         response = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
         print(f"✅ [LOG] Geçici cevap Google Drive'a yüklendi. Dosya ID: {response.get('id')}")
     except Exception as e:
+        print("❌ [DEBUG] Google Drive yükleme kısmında hata oluştu.")
         print(f"❌ [LOG] Geçici cevap Google Drive'a yüklenemedi: {e}")
 
 def yukle_temp_cevaplar(ad_soyad):
