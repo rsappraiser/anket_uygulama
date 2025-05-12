@@ -65,6 +65,7 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
 
     except Exception as e:
         print("Google Drive'a yükleme hatası:", e)
+        print("Eğer bu hata devam ederse, lütfen Google Drive'daki ilgili klasörün paylaşım ayarlarını 'Bağlantıya sahip olan herkes' ve 'Düzenleyici' olarak ayarlayınız.")
 
     # Google Sheets'e kaydetme
     try:
@@ -144,6 +145,7 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
         tb = traceback.format_exc()
         print("❌ [DEBUG] Google Drive yükleme kısmında hata oluştu:\n", tb)
         print(f"❌ [LOG] Geçici cevap Google Drive'a yüklenemedi: {e}")
+        print("Eğer bu hata devam ederse, lütfen Google Drive'daki ilgili klasörün paylaşım ayarlarını 'Bağlantıya sahip olan herkes' ve 'Düzenleyici' olarak ayarlayınız.")
 
 def yukle_temp_cevaplar(ad_soyad):
     temp_file = f"temp_cevaplar/temp_{ad_soyad.replace(' ','_').lower()}.json"
