@@ -35,6 +35,13 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
     sonuc_df.to_excel("/mount/src/anket_sonuclari/sonuc_{}.xlsx".format(ad_soyad.replace(' ','_').lower()), index=False)
 
     # Google Drive'a yükleme
+    import sys
+    print("✅ googleapiclient modülü kontrol ediliyor...", file=sys.stderr)
+    try:
+        import googleapiclient
+        print("✅ googleapiclient modülü yüklü.", file=sys.stderr)
+    except ImportError:
+        print("❌ googleapiclient modülü bulunamadı!", file=sys.stderr)
     try:
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
@@ -98,7 +105,15 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
     print(f"📤 [LOG] Google Drive'a geçici cevap yükleme başlıyor: {temp_file}")
     st.write("📤 Google Drive'a yükleniyor...")
     print("🟢 [TRACE] Google upload aşaması başladı")
+    import sys
+    print("✅ googleapiclient modülü kontrol ediliyor...", file=sys.stderr)
     try:
+        import googleapiclient
+        print("✅ googleapiclient modülü yüklü.", file=sys.stderr)
+    except ImportError:
+        print("❌ googleapiclient modülü bulunamadı!", file=sys.stderr)
+    try:
+        print("🔐 [DEBUG] st.secrets.keys():", list(st.secrets.keys()))
         print(f"📤 [DEBUG] Google Drive upload için hazırlanıyor: {temp_file}")
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
@@ -115,9 +130,9 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
         response = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
         print(f"✅ [LOG] Geçici cevap Google Drive'a yüklendi. Dosya ID: {response.get('id')}")
     except Exception as e:
-        print("❌ [DEBUG] Google Drive yükleme kısmında hata oluştu.")
         import traceback
-        traceback.print_exc()
+        tb = traceback.format_exc()
+        print("❌ [DEBUG] Google Drive yükleme kısmında hata oluştu:\n", tb)
         print(f"❌ [LOG] Geçici cevap Google Drive'a yüklenemedi: {e}")
 
 def yukle_temp_cevaplar(ad_soyad):
