@@ -56,7 +56,10 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
 
         drive_service = build("drive", "v3", credentials=drive_creds)
 
-        file_metadata = {"name": os.path.basename(filename)}
+        file_metadata = {
+            "name": os.path.basename(filename),
+            "parents": ["1kdidudM1PbISAeO0nNHZ_VErc3ncvV3l"]  # Anket_Cevapları klasörüne yükle
+        }
         media = MediaFileUpload(filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
         drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
 
@@ -129,7 +132,10 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
         )
         drive_service = build("drive", "v3", credentials=drive_creds)
 
-        file_metadata = {"name": os.path.basename(temp_file)}
+        file_metadata = {
+            "name": os.path.basename(temp_file),
+            "parents": ["1kdidudM1PbISAeO0nNHZ_VErc3ncvV3l"]  # Anket_Cevapları klasörüne yükle
+        }
         media = MediaFileUpload(temp_file, mimetype="application/json")
         response = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
         print(f"✅ [LOG] Geçici cevap Google Drive'a yüklendi. Dosya ID: {response.get('id')}")
