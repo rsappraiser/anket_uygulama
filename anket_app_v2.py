@@ -116,6 +116,8 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
         print(f"✅ [LOG] Geçici cevap Google Drive'a yüklendi. Dosya ID: {response.get('id')}")
     except Exception as e:
         print("❌ [DEBUG] Google Drive yükleme kısmında hata oluştu.")
+        import traceback
+        traceback.print_exc()
         print(f"❌ [LOG] Geçici cevap Google Drive'a yüklenemedi: {e}")
 
 def yukle_temp_cevaplar(ad_soyad):
