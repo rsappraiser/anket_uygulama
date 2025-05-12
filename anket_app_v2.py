@@ -34,7 +34,7 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
     os.makedirs("/mount/src/anket_sonuclari", exist_ok=True)
     sonuc_df.to_excel("/mount/src/anket_sonuclari/sonuc_{}.xlsx".format(ad_soyad.replace(' ','_').lower()), index=False)
 
-    # Google Drive'a yükleme
+    # Google Drive'a yükleme (tekil dosya güncelleme veya oluşturma)
     import sys
     print("✅ googleapiclient modülü kontrol ediliyor...", file=sys.stderr)
     try:
@@ -56,12 +56,27 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
 
         drive_service = build("drive", "v3", credentials=drive_creds)
 
-        file_metadata = {
-            "name": os.path.basename(filename),
-            "parents": ["1kdidudM1PbISAeO0nNHZ_VErc3ncvV3l"]  # Anket_Cevapları klasörüne yükle
-        }
+        file_name = os.path.basename(filename)
+        folder_id = "1kdidudM1PbISAeO0nNHZ_VErc3ncvV3l"
+
+        # Check if file exists on Drive
+        query = f"name = '{file_name}' and '{folder_id}' in parents and trashed = false"
+        results = drive_service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+        items = results.get('files', [])
+
         media = MediaFileUpload(filename, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+
+        if items:
+            # Update existing file
+            file_id = items[0]['id']
+            drive_service.files().update(fileId=file_id, media_body=media).execute()
+        else:
+            # Upload as new file
+            file_metadata = {
+                "name": file_name,
+                "parents": [folder_id]
+            }
+            drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
 
     except Exception as e:
         print("Google Drive'a yükleme hatası:", e)
@@ -100,7 +115,6 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
     os.makedirs("temp_cevaplar", exist_ok=True)
     temp_file = f"temp_cevaplar/temp_{ad_soyad.replace(' ','_').lower()}.json"
     print(f"📝 [LOG] Geçici cevap kaydediliyor: {temp_file}")
-    st.write("📄 Geçici cevap kaydediliyor...")
     print(f"🟢 [TRACE] Dosya hazırlanıyor: {temp_file}")
     with open(temp_file, "w", encoding="utf-8") as f:
         json.dump(cevaplar, f, ensure_ascii=False, indent=2)
@@ -108,9 +122,6 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
     print(f"✅ [LOG] Geçici cevap dosyası yazıldı: {temp_file}")
 
     # Google Drive'a geçici cevap yükleme
-    print(f"📤 [LOG] Google Drive'a geçici cevap yükleme başlıyor: {temp_file}")
-    st.write("📤 Google Drive'a yükleniyor...")
-    print("🟢 [TRACE] Google upload aşaması başladı")
     import sys
     print("✅ googleapiclient modülü kontrol ediliyor...", file=sys.stderr)
     try:
@@ -119,8 +130,6 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
     except ImportError:
         print("❌ googleapiclient modülü bulunamadı!", file=sys.stderr)
     try:
-        print("🔐 [DEBUG] st.secrets.keys():", list(st.secrets.keys()))
-        print(f"📤 [DEBUG] Google Drive upload için hazırlanıyor: {temp_file}")
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
         from googleapiclient.http import MediaFileUpload
@@ -135,22 +144,13 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
 
         file_name = os.path.basename(temp_file)
         folder_id = "1kdidudM1PbISAeO0nNHZ_VErc3ncvV3l"
-        query = f"name='{file_name}' and '{folder_id}' in parents and trashed=false"
-        result = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
-        files = result.get('files', [])
+        file_metadata = {
+            "name": file_name,
+            "parents": [folder_id]
+        }
         media = MediaFileUpload(temp_file, mimetype="application/json")
-
-        if files:
-            file_id = files[0]['id']
-            response = drive_service.files().update(fileId=file_id, media_body=media).execute()
-            print(f"✅ [LOG] Geçici cevap dosyası güncellendi. Dosya ID: {response.get('id')}")
-        else:
-            file_metadata = {
-                "name": file_name,
-                "parents": [folder_id]
-            }
-            response = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-            print(f"✅ [LOG] Geçici cevap Google Drive'a yüklendi. Dosya ID: {response.get('id')}")
+        response = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+        print(f"✅ [LOG] Geçici cevap Google Drive'a yüklendi. Dosya ID: {response.get('id')}")
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
@@ -504,7 +504,7 @@ if st.session_state["ankete_basla"]:
                 cevaplanan_birimler.append(birim)
         eksik_birimler = [b for b in calisanlar.keys() if b not in cevaplanan_birimler and b != "Görüş ve Öneriler"]
 
-        if not eksik_birimler:
+        if secilen_birim == "Görüş ve Öneriler" and not eksik_birimler:
             if not st.session_state["bitirme_onayi"]:
                 if st.button("Anketi Bitir"):
                     st.session_state["bitirme_onayi"] = True
