@@ -22,6 +22,7 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
     filename = f"anket_sonuclari/sonuc_{ad_soyad.replace(' ','_').lower()}.xlsx"
     cevaplar_birim["Birim"] = birim
 
+    # Kalıcı sonuç dosyasının birden fazla kez oluşmaması için kontrol
     if os.path.exists(filename):
         mevcut_df = pd.read_excel(filename)
         mevcut_df = mevcut_df[mevcut_df["Birim"] != birim]
@@ -30,7 +31,12 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
 
     yeni_df = pd.DataFrame([cevaplar_birim])
     sonuc_df = pd.concat([mevcut_df, yeni_df], ignore_index=True)
-    sonuc_df.to_excel(filename, index=False)
+    # Sadece bir kez dosya oluşturulacak şekilde kontrol
+    if not os.path.exists(filename):
+        sonuc_df.to_excel(filename, index=False)
+    else:
+        # Dosya zaten varsa, sadece güncelle
+        sonuc_df.to_excel(filename, index=False)
     os.makedirs("/mount/src/anket_sonuclari", exist_ok=True)
     sonuc_df.to_excel("/mount/src/anket_sonuclari/sonuc_{}.xlsx".format(ad_soyad.replace(' ','_').lower()), index=False)
 
@@ -144,13 +150,22 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
 
         file_name = os.path.basename(temp_file)
         folder_id = "1kdidudM1PbISAeO0nNHZ_VErc3ncvV3l"
-        file_metadata = {
-            "name": file_name,
-            "parents": [folder_id]
-        }
+        # Check if file exists on Drive
+        query = f"name = '{file_name}' and '{folder_id}' in parents and trashed = false"
+        results = drive_service.files().list(q=query, spaces='drive', fields="files(id, name)").execute()
+        items = results.get('files', [])
+
         media = MediaFileUpload(temp_file, mimetype="application/json")
-        response = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-        print(f"✅ [LOG] Geçici cevap Google Drive'a yüklendi. Dosya ID: {response.get('id')}")
+
+        if items:
+            file_id = items[0]['id']
+            drive_service.files().update(fileId=file_id, media_body=media).execute()
+        else:
+            file_metadata = {
+                "name": file_name,
+                "parents": [folder_id]
+            }
+            drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
