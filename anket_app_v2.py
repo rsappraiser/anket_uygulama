@@ -48,7 +48,7 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
         from googleapiclient.http import MediaFileUpload
 
         key_data = dict(st.secrets["google"])
-        key_data["private_key"] = base64.b64decode(st.secrets["google"]["private_key_b64"]).decode()
+        key_data["private_key"] = base64.b64decode(st.secrets["google"]["private_key_b64"])
 
         drive_creds = service_account.Credentials.from_service_account_info(
             key_data,
