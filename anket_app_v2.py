@@ -133,13 +133,24 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
         )
         drive_service = build("drive", "v3", credentials=drive_creds)
 
-        file_metadata = {
-            "name": os.path.basename(temp_file),
-            "parents": ["1kdidudM1PbISAeO0nNHZ_VErc3ncvV3l"]  # Anket_Cevapları klasörüne yükle
-        }
+        file_name = os.path.basename(temp_file)
+        folder_id = "1kdidudM1PbISAeO0nNHZ_VErc3ncvV3l"
+        query = f"name='{file_name}' and '{folder_id}' in parents and trashed=false"
+        result = drive_service.files().list(q=query, spaces='drive', fields='files(id, name)').execute()
+        files = result.get('files', [])
         media = MediaFileUpload(temp_file, mimetype="application/json")
-        response = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
-        print(f"✅ [LOG] Geçici cevap Google Drive'a yüklendi. Dosya ID: {response.get('id')}")
+
+        if files:
+            file_id = files[0]['id']
+            response = drive_service.files().update(fileId=file_id, media_body=media).execute()
+            print(f"✅ [LOG] Geçici cevap dosyası güncellendi. Dosya ID: {response.get('id')}")
+        else:
+            file_metadata = {
+                "name": file_name,
+                "parents": [folder_id]
+            }
+            response = drive_service.files().create(body=file_metadata, media_body=media, fields="id").execute()
+            print(f"✅ [LOG] Geçici cevap Google Drive'a yüklendi. Dosya ID: {response.get('id')}")
     except Exception as e:
         import traceback
         tb = traceback.format_exc()
