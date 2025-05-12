@@ -481,17 +481,20 @@ if st.session_state["ankete_basla"]:
             st.session_state["cevaplar"]["OneriVeGorusler"][oneri_key] = kullanici_yanit
             kaydet_temp_cevaplar(st.session_state["secilen_ad"], st.session_state["cevaplar"])
 
-        if st.button(f"{secilen_birim} Cevaplarını Kaydet"):
+
+        # Eksik soru kontrolü
+        eksik_sorular = set()
+        for idx, soru in enumerate(sorular, 1):
+            for kisi in calisanlar[secilen_birim]:
+                key = f"{secilen_birim}_{soru}_{kisi}_{st.session_state['secilen_ad']}"
+                if st.session_state["cevaplar"][secilen_birim].get(key, "Seçiniz") == "Seçiniz":
+                    eksik_sorular.add(idx)
+
+        eksikler_var = bool(eksik_sorular)
+
+        if st.button(f"{secilen_birim} Cevaplarını Kaydet") or not eksikler_var:
             cevaplar_birim = st.session_state["cevaplar"].get(secilen_birim, {})
-
-            eksik_sorular = set()
-            for idx, soru in enumerate(sorular, 1):
-                for kisi in calisanlar[secilen_birim]:
-                    key = f"{secilen_birim}_{soru}_{kisi}_{st.session_state['secilen_ad']}"
-                    if st.session_state["cevaplar"][secilen_birim].get(key, "Seçiniz") == "Seçiniz":
-                        eksik_sorular.add(idx)
-
-            if eksik_sorular:
+            if eksikler_var:
                 eksikler = sorted(list(eksik_sorular))
                 st.warning(f"🚨 Eksik cevapladığınız soru numaraları: {', '.join(map(str, eksikler))}")
             else:
