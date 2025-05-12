@@ -47,8 +47,11 @@ def kaydet_cevaplar(ad_soyad, birim, cevaplar_birim):
         from googleapiclient.discovery import build
         from googleapiclient.http import MediaFileUpload
 
+        key_data = dict(st.secrets["google"])
+        key_data["private_key"] = base64.b64decode(st.secrets["google"]["private_key_b64"]).decode()
+
         drive_creds = service_account.Credentials.from_service_account_info(
-            st.secrets["google"],
+            key_data,
             scopes=["https://www.googleapis.com/auth/drive"]
         )
 
@@ -115,12 +118,19 @@ def kaydet_temp_cevaplar(ad_soyad, cevaplar):
     try:
         print("🔐 [DEBUG] st.secrets.keys():", list(st.secrets.keys()))
         print(f"📤 [DEBUG] Google Drive upload için hazırlanıyor: {temp_file}")
+        # --- DEBUG prints for private_key_b64 ---
+        print("🧪 [DEBUG] private_key_b64 mevcut mu?:", "private_key_b64" in st.secrets["google"])
+        print("🧪 [DEBUG] private_key_b64 ilk 50 karakter:", st.secrets["google"].get("private_key_b64", "")[:50])
         from google.oauth2 import service_account
         from googleapiclient.discovery import build
         from googleapiclient.http import MediaFileUpload
 
+        import base64
+        key_data = dict(st.secrets["google"])
+        key_data["private_key"] = base64.b64decode(st.secrets["google"]["private_key_b64"]).decode()
+
         drive_creds = service_account.Credentials.from_service_account_info(
-            st.secrets["google"],
+            key_data,
             scopes=["https://www.googleapis.com/auth/drive"]
         )
         drive_service = build("drive", "v3", credentials=drive_creds)
