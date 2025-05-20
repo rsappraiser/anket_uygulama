@@ -294,7 +294,11 @@ if not st.session_state["ankete_basla"] and not st.session_state["anket_tamamlan
     print("📋 [LOG] Giriş sayfası yüklendi. Süre:", round(time.time() - start_time, 2), "saniye")
     token = st.session_state["token"]
 
-    if token and kontrol_token(token):
+    if token not in kullanicilar_df["token"].astype(str).values:
+        st.error("Geçersiz veya süresi dolmuş token.")
+        st.stop()
+
+    if kontrol_token(token):
         st.error("Bu anketi daha önce tamamlamıştınız. Sayfadan çıkış yapabilirsiniz.")
         st.stop()
 
