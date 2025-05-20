@@ -206,6 +206,7 @@ def kontrol_token(token):
     if os.path.exists(path):
         with open(path, "r", encoding="utf-8") as f:
             tokenler = json.load(f)
+            print("🗂 [DEBUG] Kullanılmış Tokenler:", tokenler)
         return token in tokenler
     return False
 
